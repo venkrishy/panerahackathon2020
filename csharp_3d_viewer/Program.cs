@@ -6,6 +6,8 @@ using System.Collections.Generic;
 using System.Numerics;
 using System.Threading.Tasks;
 using System.Linq;
+using uPLibrary.Networking.M2Mqtt;
+using Newtonsoft.Json;
 
 namespace Csharp_3d_viewer
 {
@@ -14,6 +16,10 @@ namespace Csharp_3d_viewer
         private static Renderer renderer;
         static void Main()
         {
+            Product product = new Product();
+            product.ingredient = "turkey";
+            InvokeMQTT(product);
+
             var videoTask = RunVideo();
 
             Task.Delay(2000).Wait();
@@ -81,7 +87,7 @@ namespace Csharp_3d_viewer
             });
         }
 
-        static List<string> ingridents = new List<string>() { "Lettuce", "Tomato"};
+        static List<string> ingredients = new List<string>() { "turkey", "sliced bacon", "chopped bacon",  "signature sauce", "emerald greens","tomato","salt and pepper", "avocado","gouda cheese","pickle spear","spicy mustard", "mayo", "gorgonzola cheese","american cheese", "red onion"};
         static Dictionary<string, Vector3> locations = new Dictionary<string, Vector3>();
 
         public static async Task GetCommandsAsync()
@@ -94,7 +100,7 @@ namespace Csharp_3d_viewer
             await SynthesisToSpeakerAsync("Welcome to auto setup for Panera light control");
             await SynthesisToSpeakerAsync("Please wait for ingrident to be spoken then hit enter to continue when right hand is in place");
 
-            foreach (var item in ingridents)
+            foreach (var item in ingredients)
             {
                 await SynthesisToSpeakerAsync(item);
                 // Wait
@@ -107,6 +113,17 @@ namespace Csharp_3d_viewer
             }
 
 
+        }
+
+        public static async Task InvokeMQTT(Product product)
+        {
+            string connectionString = "mqtt.panerahackathon.com";
+            
+            var client = new MqttClient(connectionString);
+            client.Connect("");
+            string Message = JsonConvert.SerializeObject(product);
+            // Publish a message to topic
+            client.Publish("ingedients/pulled", System.Text.Encoding.UTF8.GetBytes(Message));
         }
 
         public static async Task LoopDetectorAsync()
@@ -125,9 +142,16 @@ namespace Csharp_3d_viewer
                     (x.Value.Y - offsetVal < thePoint.Y && thePoint.Y < x.Value.Y + offsetVal) &&
                     (x.Value.Z - offsetVal < thePoint.Z && thePoint.Z < x.Value.Z + offsetVal)));
 
+                    //System.Collections.Generic.List<Product> products = new List<Product>();
+                    Product product = new Product();
+                    product.ingredient = first.Key;
+
+                    //products.Add(product);                    
+                   
                     if (!string.IsNullOrEmpty(first.Key))
                     {
                         Console.WriteLine("Found " + first.Key);
+                        await InvokeMQTT(product);
                     }
 
                 }
