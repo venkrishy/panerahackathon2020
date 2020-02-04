@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Numerics;
 using System.Threading.Tasks;
 using System.Linq;
+using Newtonsoft.Json;
 
 namespace Csharp_3d_viewer
 {
@@ -21,6 +22,20 @@ namespace Csharp_3d_viewer
 
             LoopDetectorAsync().Wait();
             videoTask.Wait();
+
+        }
+
+        private static void SaveSettings()
+        {
+            string json = JsonConvert.SerializeObject(locations);
+            System.IO.File.WriteAllText(@"layout.json", json);
+        }
+
+        private static void LoadSettings()
+        {
+            string text = System.IO.File.ReadAllText(@"layout.json");
+
+            locations = JsonConvert.DeserializeObject<Dictionary<string, Model.ItemLocation>>(text);
 
         }
 
@@ -82,56 +97,115 @@ namespace Csharp_3d_viewer
         }
 
         static List<string> ingridents = new List<string>() { "Lettuce", "Tomato"};
-        static Dictionary<string, Vector3> locations = new Dictionary<string, Vector3>();
+        static Dictionary<string, Model.ItemLocation> locations = new Dictionary<string, Model.ItemLocation>();
+
+
+        static Model.ItemHit handIn = null;
 
         public static async Task GetCommandsAsync()
         {
-
-            renderer.pullPoint = true;
-            Console.WriteLine("Give Me a Command(all, ingredient):");
-            var command = Console.ReadLine();
-
-            await SynthesisToSpeakerAsync("Welcome to auto setup for Panera light control");
-            await SynthesisToSpeakerAsync("Please wait for ingrident to be spoken then hit enter to continue when right hand is in place");
-
-            foreach (var item in ingridents)
+            try
             {
-                await SynthesisToSpeakerAsync(item);
-                // Wait
-                Console.WriteLine("Hit enter once hand in place");
-                Console.ReadKey();
-                // Read setting
-                System.Numerics.Vector3 thePoint = renderer.thePoint;
-                locations.Add(item, thePoint);
-                Console.WriteLine($"Right Hand Found X:{thePoint.X} Y:{thePoint.Y} Z:{thePoint.Z} ");
+                LoadSettings();
+            }
+            catch (Exception)
+            {
             }
 
+            renderer.pullPoint = true;
+            await SynthesisToSpeakerAsync("Welcome to auto setup for Panera light control");
+            Console.Write("Give Me a Command(setup, run, exit):");
+            var command = Console.ReadLine();
+
+            while (command != "exit" && command != "run")
+            {
+                switch (command)
+                {
+                    case "setup":
+                        locations.Clear();
+                        await SynthesisToSpeakerAsync("Please wait for ingredient to be spoken then hit enter to continue when right hand is in place");
+
+                        foreach (var item in ingridents)
+                        {
+                            await SynthesisToSpeakerAsync(item);
+                            // Wait
+                            Console.WriteLine("Hit enter once hand in place");
+                            Console.ReadKey();
+                            // Read setting
+                            System.Numerics.Vector3 thePoint = renderer.thePoint;
+                            locations.Add(item, new Model.ItemLocation() { Location = thePoint, Item = item });
+                            Console.WriteLine($"Right Hand Found X:{thePoint.X} Y:{thePoint.Y} Z:{thePoint.Z} ");
+                        }
+
+                        SaveSettings();
+                        break;
+                }
+
+                Console.Write("Next Command:");
+                command = Console.ReadLine();
+
+            }
 
         }
 
         public static async Task LoopDetectorAsync()
         {
             DateTime lastEvent = DateTime.Now;
-            int offsetVal = 200;
+            int offsetVal = 100;
 
             while (renderer.IsActive)
             {
-                if (DateTime.Now.Subtract(lastEvent).TotalMilliseconds > 250)
+                if (DateTime.Now.Subtract(lastEvent).TotalMilliseconds > 25)
                 {
                     lastEvent = DateTime.Now;
                     System.Numerics.Vector3 thePoint = renderer.thePoint;
+                   
+                    var first = locations.Where(x => ((x.Value.Location.X - offsetVal < thePoint.X && thePoint.X < x.Value.Location.X + offsetVal) &&
+                    (x.Value.Location.Y - offsetVal < thePoint.Y && thePoint.Y < x.Value.Location.Y + 10) &&
+                    (x.Value.Location.Z - offsetVal < thePoint.Z && thePoint.Z < x.Value.Location.Z + offsetVal))).OrderBy(x=> Math.Abs(Vector3.Distance(thePoint,x.Value.Location))).FirstOrDefault();
 
-                    var first = locations.FirstOrDefault(x => ((x.Value.X - offsetVal < thePoint.X && thePoint.X < x.Value.X + offsetVal) &&
-                    (x.Value.Y - offsetVal < thePoint.Y && thePoint.Y < x.Value.Y + offsetVal) &&
-                    (x.Value.Z - offsetVal < thePoint.Z && thePoint.Z < x.Value.Z + offsetVal)));
-
-                    if (!string.IsNullOrEmpty(first.Key))
+                    if (string.IsNullOrEmpty(first.Key))
                     {
-                        Console.WriteLine("Found " + first.Key);
+                        if (handIn != null)
+                        {
+                            double timeGap = DateTime.Now.Subtract(handIn.HitTime).TotalMilliseconds;
+
+                            Console.WriteLine($"Time Gap {handIn.Item}:  {timeGap} ");
+                            if (timeGap > 200)
+                            {
+                                // todo: control with time
+                                Console.WriteLine($"!!EVENT {handIn.Item} Hand Out");
+                            }
+                            
+                            //todo: add mqtt
+                        }
+                        handIn = null;
+                    }
+                    else
+                    {
+                        // something has been hit
+                        if (handIn == null || handIn.Item != first.Key)
+                        {
+                            if(handIn != null && handIn.Item != first.Key)
+                            {
+                                double timeGap = DateTime.Now.Subtract(handIn.HitTime).TotalMilliseconds;
+
+                                Console.WriteLine($"Time Gap {handIn.Item}:  {timeGap} ");
+                                if (timeGap > 200)
+                                {
+                                    // todo: control with time
+                                    Console.WriteLine($"!!EVENT {handIn.Item} Hand Out");
+                                }
+
+                            }
+                            Console.WriteLine($"Found {first.Key} Hand In");
+                            handIn = new Model.ItemHit() { Item = first.Key, HitTime = DateTime.Now };
+                        }
+
                     }
 
                 }
-                
+
             }
         }
 

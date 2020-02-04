@@ -109,13 +109,13 @@ namespace Csharp_3d_viewer
 
                 PointCloud.ComputePointCloud(lastFrame.Capture.Depth, ref pointCloud);
                 PointCloudRenderer.Render(pointCloud, new Vector4(1, 1, 1, 1));
-
+                Vector3 rightHand = Vector3.Zero;
                 for (uint i = 0; i < lastFrame.NumberOfBodies; ++i)
                 {
                     var skeleton = lastFrame.GetBodySkeleton(i);
                     var bodyId = lastFrame.GetBodyId(i);
                     var bodyColor = BodyColors.GetColorAsVector(bodyId);
-
+                    
                     for (int jointId = 0; jointId < (int)JointId.Count; ++jointId)
                     {
                         var joint = skeleton.GetJoint(jointId);
@@ -124,7 +124,14 @@ namespace Csharp_3d_viewer
                         {
                             if(pullPoint)
                             {
-                                thePoint = joint.Position;
+                                if (rightHand == Vector3.Zero)
+                                    rightHand = joint.Position;
+                                else
+                                {
+                                    if (Math.Abs(Vector3.Distance(rightHand, Vector3.Zero)) > Math.Abs(Vector3.Distance(joint.Position, Vector3.Zero)))
+                                        rightHand = joint.Position;
+                                }
+
                             }
                            // Console.WriteLine($"Right Hand Found X:{joint.Position.X} Y:{joint.Position.Y} Z:{joint.Position.Z} ");
                         }
@@ -139,6 +146,11 @@ namespace Csharp_3d_viewer
                             CylinderRenderer.Render(joint.Position / 1000, skeleton.GetJoint((int)parentId).Position / 1000, bodyColor);
                         }
                     }
+                }
+
+                if(rightHand != Vector3.Zero)
+                {
+                    thePoint = rightHand;
                 }
             }
         }
