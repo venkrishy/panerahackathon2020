@@ -99,7 +99,7 @@ namespace Csharp_3d_viewer
 
         static List<string> ingredients = new List<string>() { "turkey", "sliced bacon", "chopped bacon", "signature sauce", "emerald greens", "tomato", "salt and pepper", "avocado", "gouda cheese", "pickle spear", "spicy mustard", "mayo", "gorgonzola cheese", "american cheese", "red onion" };
 
-        //static List<string> ingredients = new List<string>() { "tomato" };
+        //static List<string> ingredients = new List<string>() { "tomato","turkey", "sliced bacon", "chopped bacon" };
 
         static Dictionary<string, Model.ItemLocation> locations = new Dictionary<string, Model.ItemLocation>();
 
@@ -123,53 +123,82 @@ namespace Csharp_3d_viewer
 
             while (command != "exit" && command != "run")
             {
-                switch (command)
+
+                if (locations.ContainsKey(command))
                 {
-                    case "setup":
-                        locations.Clear();
-                        await SynthesisToSpeakerAsync("Please wait for ingredient to be spoken then hit enter to continue when right hand is in place");
+                        var itemIng = locations[command];
 
-                        foreach (var item in ingredients)
+                        // Wait
+                        Console.WriteLine("Hit enter once hand in place");
+                        Console.ReadKey();
+                        // Read setting
+                        System.Numerics.Vector3 thePoint = renderer.thePoint;
+                        Model.ItemLocation theItem;
+                        if (locations.ContainsKey(command))
                         {
-                            await SynthesisToSpeakerAsync(item);
-                            // Wait
-                            Console.WriteLine("Hit enter once hand in place");
-                            Console.ReadKey();
-                            // Read setting
-                            System.Numerics.Vector3 thePoint = renderer.thePoint;
-                            locations.Add(item, new Model.ItemLocation() { Location = thePoint, Item = item });
-                            Console.WriteLine($"Right Hand Found X:{thePoint.X} Y:{thePoint.Y} Z:{thePoint.Z} ");
+                            theItem = locations[command];
+                            theItem.Location = thePoint;
                         }
-
-                        SaveSettings();
-                        break;
-                    case "setup short":
-                        await SynthesisToSpeakerAsync("Please wait for ingredient to be spoken then hit enter to continue when right hand is in place");
-
-                        for (int i = 0; i < 3; i++)
+                        else
                         {
-                            var item = ingredients[0];
-                            await SynthesisToSpeakerAsync(item);
-                            // Wait
-                            Console.WriteLine("Hit enter once hand in place");
-                            Console.ReadKey();
-                            // Read setting
-                            System.Numerics.Vector3 thePoint = renderer.thePoint;
-                            Model.ItemLocation theItem;
-                            if (locations.ContainsKey(item))
+                            locations.Add(command, new Model.ItemLocation() { Location = thePoint, Item = command });
+                        }
+                        Console.WriteLine($"Right Hand Found X:{thePoint.X} Y:{thePoint.Y} Z:{thePoint.Z} ");
+                    
+
+                    SaveSettings();
+                }
+                else
+                {
+                    switch (command)
+                    {
+                        case "setup":
+                            locations.Clear();
+                            await SynthesisToSpeakerAsync("Please wait for ingredient to be spoken then hit enter to continue when right hand is in place");
+
+                            foreach (var item in ingredients)
                             {
-                                theItem = locations[item];
-                                theItem.Location = thePoint;
-                            }
-                            else
-                            {
+                                //await SynthesisToSpeakerAsync(item);
+                                // Wait
+                                Console.WriteLine(item);
+                                Console.WriteLine("Hit enter once hand in place");
+                                Console.ReadKey();
+                                // Read setting
+                                System.Numerics.Vector3 thePoint = renderer.thePoint;
                                 locations.Add(item, new Model.ItemLocation() { Location = thePoint, Item = item });
+                                Console.WriteLine($"Right Hand Found X:{thePoint.X} Y:{thePoint.Y} Z:{thePoint.Z} ");
                             }
-                            Console.WriteLine($"Right Hand Found X:{thePoint.X} Y:{thePoint.Y} Z:{thePoint.Z} ");
-                        }
 
-                        SaveSettings();
-                        break;
+                            SaveSettings();
+                            break;
+                        case "setup short":
+                            await SynthesisToSpeakerAsync("Please wait for ingredient to be spoken then hit enter to continue when right hand is in place");
+
+                            for (int i = 0; i < 3; i++)
+                            {
+                                var item = ingredients[i];
+                                await SynthesisToSpeakerAsync(item);
+                                // Wait
+                                Console.WriteLine("Hit enter once hand in place");
+                                Console.ReadKey();
+                                // Read setting
+                                System.Numerics.Vector3 thePoint = renderer.thePoint;
+                                Model.ItemLocation theItem;
+                                if (locations.ContainsKey(item))
+                                {
+                                    theItem = locations[item];
+                                    theItem.Location = thePoint;
+                                }
+                                else
+                                {
+                                    locations.Add(item, new Model.ItemLocation() { Location = thePoint, Item = item });
+                                }
+                                Console.WriteLine($"Right Hand Found X:{thePoint.X} Y:{thePoint.Y} Z:{thePoint.Z} ");
+                            }
+
+                            SaveSettings();
+                            break;
+                    }
                 }
 
                 Console.Write("Next Command:");
@@ -182,36 +211,29 @@ namespace Csharp_3d_viewer
         public static async Task LoopDetectorAsync()
         {
             DateTime lastEvent = DateTime.Now;
-            int offsetVal = 100;
+            int zoffsetVal = 200;
+            int xoffsetVal = 100;
 
             while (renderer.IsActive)
             {
-                if (DateTime.Now.Subtract(lastEvent).TotalMilliseconds > 25)
+                if (DateTime.Now.Subtract(lastEvent).TotalMilliseconds > 40)
                 {
                     lastEvent = DateTime.Now;
                     System.Numerics.Vector3 thePoint = renderer.thePoint;
-                   
-                    var first = locations.Where(x => ((x.Value.Location.X - offsetVal < thePoint.X && thePoint.X < x.Value.Location.X + offsetVal) &&
-                    (x.Value.Location.Y - offsetVal < thePoint.Y && thePoint.Y < x.Value.Location.Y + 10) &&
-                    (x.Value.Location.Z - offsetVal < thePoint.Z && thePoint.Z < x.Value.Location.Z + offsetVal))).OrderBy(x=> Math.Abs(Vector3.Distance(thePoint,x.Value.Location))).FirstOrDefault();
+
+                   // Console.WriteLine($"Right Hand Found X:{thePoint.X} Y:{thePoint.Y} Z:{thePoint.Z} ");
+
+                    var first = locations.Where(x => ((x.Value.Location.X - xoffsetVal < thePoint.X && thePoint.X < x.Value.Location.X + xoffsetVal) &&
+                    (x.Value.Location.Y - 10 < thePoint.Y && thePoint.Y < x.Value.Location.Y + 400) &&
+                    (x.Value.Location.Z - zoffsetVal < thePoint.Z && thePoint.Z < x.Value.Location.Z + zoffsetVal))).OrderBy(x=> Math.Abs(Vector3.Distance(thePoint,x.Value.Location))).FirstOrDefault();
 
 
                     if (string.IsNullOrEmpty(first.Key))
                     {
                         if (handIn != null)
                         {
-                            double timeGap = DateTime.Now.Subtract(handIn.HitTime).TotalMilliseconds;
+                            await SendIngredient();
 
-                            Console.WriteLine($"Time Gap {handIn.Item}:  {timeGap} ");
-                            if (timeGap > 200)
-                            {
-                                // todo: control with time
-                                Console.WriteLine($"!!EVENT {handIn.Item} Hand Out");
-                                Product product = new Product();
-                                product.ingredient = handIn.Item;
-                                await InvokeMQTT(product);
-                            }
-                            
                             //todo: add mqtt
                         }
                         handIn = null;
@@ -223,17 +245,7 @@ namespace Csharp_3d_viewer
                         {
                             if(handIn != null && handIn.Item != first.Key)
                             {
-                                double timeGap = DateTime.Now.Subtract(handIn.HitTime).TotalMilliseconds;
-
-                                Console.WriteLine($"Time Gap {handIn.Item}:  {timeGap} ");
-                                if (timeGap > 200)
-                                {
-                                    // todo: control with time
-                                    Console.WriteLine($"!!EVENT {handIn.Item} Hand Out");
-                                    Product product = new Product();
-                                    product.ingredient = handIn.Item;
-                                    await InvokeMQTT(product);
-                                }
+                                await SendIngredient();
 
                             }
                             Console.WriteLine($"Found {first.Key} Hand In");
@@ -244,6 +256,21 @@ namespace Csharp_3d_viewer
 
                 }
 
+            }
+        }
+
+        private static async Task SendIngredient()
+        {
+            double timeGap = DateTime.Now.Subtract(handIn.HitTime).TotalMilliseconds;
+
+            Console.WriteLine($"Time Gap {handIn.Item}:  {timeGap} ");
+            if (timeGap > 150)
+            {
+                // todo: control with time
+                Console.WriteLine($"!!EVENT {handIn.Item} Hand Out");
+                Product product = new Product();
+                product.ingredient = handIn.Item;
+                await InvokeMQTT(product);
             }
         }
 
