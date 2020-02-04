@@ -120,7 +120,7 @@ namespace Csharp_3d_viewer
                     {
                         var joint = skeleton.GetJoint(jointId);
 
-                        if(jointId == (int)JointId.HandRight)
+                        if(jointId == (int)JointId.HandTipRight)
                         {
                             if(pullPoint)
                             {

@@ -99,6 +99,8 @@ namespace Csharp_3d_viewer
 
         static List<string> ingredients = new List<string>() { "turkey", "sliced bacon", "chopped bacon", "signature sauce", "emerald greens", "tomato", "salt and pepper", "avocado", "gouda cheese", "pickle spear", "spicy mustard", "mayo", "gorgonzola cheese", "american cheese", "red onion" };
 
+        //static List<string> ingredients = new List<string>() { "tomato" };
+
         static Dictionary<string, Model.ItemLocation> locations = new Dictionary<string, Model.ItemLocation>();
 
 
@@ -115,8 +117,8 @@ namespace Csharp_3d_viewer
             }
 
             renderer.pullPoint = true;
-            await SynthesisToSpeakerAsync("Welcome to auto setup for Panera light control");
-            Console.Write("Give Me a Command(setup, run, exit):");
+            //await SynthesisToSpeakerAsync("Welcome to auto setup for Panera light control");
+            Console.Write("Give Me a Command(setup, setup short, run, exit):");
             var command = Console.ReadLine();
 
             while (command != "exit" && command != "run")
@@ -136,6 +138,33 @@ namespace Csharp_3d_viewer
                             // Read setting
                             System.Numerics.Vector3 thePoint = renderer.thePoint;
                             locations.Add(item, new Model.ItemLocation() { Location = thePoint, Item = item });
+                            Console.WriteLine($"Right Hand Found X:{thePoint.X} Y:{thePoint.Y} Z:{thePoint.Z} ");
+                        }
+
+                        SaveSettings();
+                        break;
+                    case "setup short":
+                        await SynthesisToSpeakerAsync("Please wait for ingredient to be spoken then hit enter to continue when right hand is in place");
+
+                        for (int i = 0; i < 3; i++)
+                        {
+                            var item = ingredients[0];
+                            await SynthesisToSpeakerAsync(item);
+                            // Wait
+                            Console.WriteLine("Hit enter once hand in place");
+                            Console.ReadKey();
+                            // Read setting
+                            System.Numerics.Vector3 thePoint = renderer.thePoint;
+                            Model.ItemLocation theItem;
+                            if (locations.ContainsKey(item))
+                            {
+                                theItem = locations[item];
+                                theItem.Location = thePoint;
+                            }
+                            else
+                            {
+                                locations.Add(item, new Model.ItemLocation() { Location = thePoint, Item = item });
+                            }
                             Console.WriteLine($"Right Hand Found X:{thePoint.X} Y:{thePoint.Y} Z:{thePoint.Z} ");
                         }
 
@@ -166,8 +195,6 @@ namespace Csharp_3d_viewer
                     (x.Value.Location.Y - offsetVal < thePoint.Y && thePoint.Y < x.Value.Location.Y + 10) &&
                     (x.Value.Location.Z - offsetVal < thePoint.Z && thePoint.Z < x.Value.Location.Z + offsetVal))).OrderBy(x=> Math.Abs(Vector3.Distance(thePoint,x.Value.Location))).FirstOrDefault();
 
-                    Product product = new Product();
-                    product.ingredient = first.Key;
 
                     if (string.IsNullOrEmpty(first.Key))
                     {
@@ -180,6 +207,8 @@ namespace Csharp_3d_viewer
                             {
                                 // todo: control with time
                                 Console.WriteLine($"!!EVENT {handIn.Item} Hand Out");
+                                Product product = new Product();
+                                product.ingredient = handIn.Item;
                                 await InvokeMQTT(product);
                             }
                             
@@ -201,6 +230,8 @@ namespace Csharp_3d_viewer
                                 {
                                     // todo: control with time
                                     Console.WriteLine($"!!EVENT {handIn.Item} Hand Out");
+                                    Product product = new Product();
+                                    product.ingredient = handIn.Item;
                                     await InvokeMQTT(product);
                                 }
 
@@ -224,7 +255,7 @@ namespace Csharp_3d_viewer
             client.Connect("");
             string Message = JsonConvert.SerializeObject(product);
             // Publish a message to topic
-            client.Publish("ingedients/pulled", System.Text.Encoding.UTF8.GetBytes(Message));
+            client.Publish("ingredient/pulled", System.Text.Encoding.UTF8.GetBytes(Message));
         }
 
         public static async Task SynthesisToSpeakerAsync(string text)
