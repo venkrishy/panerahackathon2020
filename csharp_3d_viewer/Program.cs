@@ -64,8 +64,9 @@ namespace Csharp_3d_viewer
                         var deviceCalibration = device.GetCalibration();
                         PointCloud.ComputePointCloudCache(deviceCalibration);
 
-                        using (Tracker tracker = Tracker.Create(deviceCalibration, new TrackerConfiguration() { ProcessingMode = TrackerProcessingMode.Gpu, SensorOrientation = SensorOrientation.Default }))
+                        using (Tracker tracker = Tracker.Create(deviceCalibration, new TrackerConfiguration() { ProcessingMode = TrackerProcessingMode.Gpu, SensorOrientation = SensorOrientation.Default, GpuDeviceId =                        }))
                         {
+                            
                             while (renderer.IsActive)
                             {
                                 using (Capture sensorCapture = device.GetCapture())
@@ -248,7 +249,7 @@ namespace Csharp_3d_viewer
                                 await SendIngredient();
 
                             }
-                            Console.WriteLine($"Found {first.Key} Hand In");
+                            //Console.WriteLine($"Found {first.Key} Hand In");
                             handIn = new Model.ItemHit() { Item = first.Key, HitTime = DateTime.Now };
                         }
 
