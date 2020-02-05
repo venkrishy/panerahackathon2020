@@ -64,7 +64,7 @@ namespace Csharp_3d_viewer
                         var deviceCalibration = device.GetCalibration();
                         PointCloud.ComputePointCloudCache(deviceCalibration);
 
-                        using (Tracker tracker = Tracker.Create(deviceCalibration, new TrackerConfiguration() { ProcessingMode = TrackerProcessingMode.Gpu, SensorOrientation = SensorOrientation.Default, GpuDeviceId =                        }))
+                        using (Tracker tracker = Tracker.Create(deviceCalibration, new TrackerConfiguration() { ProcessingMode = TrackerProcessingMode.Gpu, SensorOrientation = SensorOrientation.Default}))
                         {
                             
                             while (renderer.IsActive)
@@ -162,8 +162,9 @@ namespace Csharp_3d_viewer
                                 //await SynthesisToSpeakerAsync(item);
                                 // Wait
                                 Console.WriteLine(item);
-                                Console.WriteLine("Hit enter once hand in place");
+                                Console.WriteLine("Hit enter once hand in place============");
                                 Console.ReadKey();
+                                //Task.Delay(2000).Wait();
                                 // Read setting
                                 System.Numerics.Vector3 thePoint = renderer.thePoint;
                                 locations.Add(item, new Model.ItemLocation() { Location = thePoint, Item = item });
@@ -288,6 +289,13 @@ namespace Csharp_3d_viewer
 
         public static async Task SynthesisToSpeakerAsync(string text)
         {
+            Console.WriteLine(text);
+            return;
+
+            /// Lets skip this for now 
+            /// 
+
+
             // Creates an instance of a speech config with specified subscription key and service region.
             // Replace with your own subscription key and service region (e.g., "westus").
             // The default language is "en-us".
